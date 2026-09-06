@@ -26,6 +26,8 @@
     body {
       width: 100%;
       height: 100%;
+      min-width: 100%;
+      min-height: 100%;
       margin: 0;
       overflow: hidden;
       overscroll-behavior: none;
@@ -39,8 +41,14 @@
     }
     #game-shell {
       position: relative;
-      width: 100%;
-      height: 100%;
+      /* Unity is built for a 16:9 canvas. Keep that ratio in XML/iframe
+         environments as well; stretching to a portrait iframe clips the
+         left and right sides of the game. */
+      width: min(100vw, calc(100vh * 16 / 9));
+      height: min(100vh, calc(100vw * 9 / 16));
+      max-width: 100vw;
+      max-height: 100vh;
+      aspect-ratio: 16 / 9;
     }
     #unity-canvas,
     #gate {
@@ -56,10 +64,12 @@
         radial-gradient(circle at 18% 20%, rgba(106, 50, 158, .18), transparent 28%),
         #020611;
     }
-    @media (min-aspect-ratio: 16/9) {
+    @supports (height: 100dvh) {
       #game-shell {
-        width: calc(100vh * 16 / 9);
-        height: 100vh;
+        width: min(100dvw, calc(100dvh * 16 / 9));
+        height: min(100dvh, calc(100dvw * 9 / 16));
+        max-width: 100dvw;
+        max-height: 100dvh;
       }
     }
     #unity-canvas {
@@ -320,6 +330,24 @@ document.write('<scr'+'ipt src="' + window.GAME_U("sdkgon.js") + '"><\/scr'+'ipt
   var unityInstance = null;
   var started = false;
   var currentLang = LANG;
+
+  // Some XML hosts report a portrait iframe even when the Unity build is
+  // landscape. Set the shell size from the real viewport so the canvas keeps
+  // its 16:9 working area after the host resizes the frame.
+  function fitGameShell() {
+    var viewport = window.visualViewport;
+    var vw = viewport && viewport.width ? viewport.width : window.innerWidth;
+    var vh = viewport && viewport.height ? viewport.height : window.innerHeight;
+    if (!vw || !vh) return;
+    var width = Math.min(vw, vh * 16 / 9);
+    var height = width * 9 / 16;
+    shell.style.width = Math.floor(width) + "px";
+    shell.style.height = Math.floor(height) + "px";
+  }
+
+  fitGameShell();
+  window.addEventListener("resize", fitGameShell);
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", fitGameShell);
 
   var STRINGS = {
     ru: { loading: "\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430\u2026", start: "\u0421\u0422\u0410\u0420\u0422", error: "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u044c \u0438\u0433\u0440\u0443. \u041e\u0431\u043d\u043e\u0432\u0438\u0442\u0435 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0443." },
